@@ -1,0 +1,214 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+:root {
+  /* Custom color palette as specified in design system */
+  --primary: #0066ff;
+  --primary-variant: #0052cc;
+  --background: #f8faff;
+  --surface: #ffffff;
+  --text-primary: #0f1724;
+  --text-muted: #6b7280;
+  --success: #16a34a;
+  --warning: #f59e0b;
+  --error: #ef4444;
+
+  /* Shadcn compatibility colors */
+  --foreground: #0f1724;
+  --card: #ffffff;
+  --card-foreground: #0f1724;
+  --popover: #ffffff;
+  --popover-foreground: #0f1724;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f1724;
+  --muted: #f1f5f9;
+  --muted-foreground: #6b7280;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f1724;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #0066ff;
+
+  /* Chart colors */
+  --chart-1: #0066ff;
+  --chart-2: #16a34a;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #8b5cf6;
+
+  /* Border radius */
+  --radius: 0.5rem;
+
+  /* Custom spacing scale based on 8px units */
+  --spacing-1: 8px;
+  --spacing-2: 16px;
+  --spacing-3: 24px;
+  --spacing-4: 32px;
+  --spacing-5: 40px;
+  --spacing-8: 64px;
+
+  /* Typography scale as specified */
+  --font-size-h1: 32px;
+  --line-height-h1: 40px;
+  --font-size-h2: 24px;
+  --line-height-h2: 32px;
+  --font-size-h3: 20px;
+  --line-height-h3: 28px;
+  --font-size-body: 16px;
+  --line-height-body: 24px;
+  --font-size-small: 12px;
+  --line-height-small: 18px;
+  --font-size-button: 14px;
+
+  /* Layout containers */
+  --container-desktop: 1200px;
+  --container-tablet: 720px;
+  --gutter-desktop: 24px;
+  --gutter-mobile: 16px;
+
+  /* Header heights */
+  --header-height-desktop: 64px;
+  --header-height-mobile: 56px;
+
+  /* Elevation shadows */
+  --shadow-card: 0 8px 20px rgba(15, 23, 36, 0.06);
+
+  /* Motion timing */
+  --duration-micro: 180ms;
+  --duration-page: 300ms;
+  --easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dark {
+  --background: #0f1724;
+  --surface: #1e293b;
+  --text-primary: #f8faff;
+  --text-muted: #94a3b8;
+  --foreground: #f8faff;
+  --card: #0f1724;
+  --card-foreground: #f8faff;
+  --popover: #0f1724;
+  --popover-foreground: #f8faff;
+  --primary: #f8faff;
+  --primary-foreground: #0f1724;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8faff;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f8faff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #0066ff;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  /* Typography utilities matching design system */
+  .text-h1 {
+    font-size: var(--font-size-h1);
+    line-height: var(--line-height-h1);
+    font-weight: 700;
+  }
+
+  .text-h2 {
+    font-size: var(--font-size-h2);
+    line-height: var(--line-height-h2);
+    font-weight: 600;
+  }
+
+  .text-h3 {
+    font-size: var(--font-size-h3);
+    line-height: var(--line-height-h3);
+    font-weight: 600;
+  }
+
+  .text-body {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    font-weight: 400;
+  }
+
+  .text-small {
+    font-size: var(--font-size-small);
+    line-height: var(--line-height-small);
+    font-weight: 400;
+  }
+
+  /* Layout container utilities */
+  .container-app {
+    max-width: var(--container-desktop);
+    margin: 0 auto;
+    padding: 0 var(--gutter-desktop);
+  }
+
+  @media (max-width: 768px) {
+    .container-app {
+      max-width: var(--container-tablet);
+      padding: 0 var(--gutter-mobile);
+    }
+  }
+
+  /* Card elevation */
+  .card-elevated {
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Motion utilities */
+  .transition-micro {
+    transition-duration: var(--duration-micro);
+    transition-timing-function: var(--easing);
+  }
+
+  .transition-page {
+    transition-duration: var(--duration-page);
+    transition-timing-function: var(--easing);
+  }
+}
+
+/* Grid system utilities */
+@layer utilities {
+  .grid-12 {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+  }
+
+  .grid-8 {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 16px;
+  }
+
+  @media (min-width: 1024px) {
+    .grid-responsive {
+      @apply grid-12;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .grid-responsive {
+      @apply grid-8;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .grid-responsive {
+      display: block;
+    }
+  }
+}
