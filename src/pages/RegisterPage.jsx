@@ -1,20 +1,23 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useParams, useNavigate } from "react-router-dom"
-import { Header } from "@/components/layout/header"
-import { Footer } from "@/components/layout/footer"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, ArrowRight, Check } from "lucide-react"
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Header } from "@/components/layout/header";
+import { Footer } from "@/components/layout/footer";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 
 export default function RegisterPage() {
-  const { slug } = useParams()
-  const navigate = useNavigate()
-  const [currentStep, setCurrentStep] = useState(1)
+  // eventId passed as query param from details page
+  const { search } = useLocation();
+  const params = new URLSearchParams(search);
+  const eventId = params.get("eventId") || slug;
+  const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -24,51 +27,126 @@ export default function RegisterPage() {
     dietaryRestrictions: "",
     agreeToTerms: false,
     subscribeNewsletter: false,
-  })
+  });
 
-  // Mock event data
-  const event = {
-    title: "Next.js Conference 2024",
-    date: "2024-12-15",
-    time: "09:00",
-    location: "Moscone Center, San Francisco, CA",
+  const [event, setEvent] = useState({
+    title: "",
+    date: "",
+    time: "",
+    location: "",
     price: 0,
-  }
+  });
+  const [loadingEvent, setLoadingEvent] = useState(true);
+  const [submitError, setSubmitError] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchEvent = async () => {
+      if (!eventId) return setLoadingEvent(false);
+      setLoadingEvent(true);
+      try {
+        const res = await fetch(`http://localhost:5000/api/events/${eventId}`);
+        if (!res.ok) throw new Error("Failed to load event");
+        const data = await res.json();
+        if (mounted) setEvent(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (mounted) setLoadingEvent(false);
+      }
+    };
+    fetchEvent();
+    return () => {
+      mounted = false;
+    };
+  }, [eventId]);
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleNext = () => {
     if (currentStep < 3) {
-      setCurrentStep(currentStep + 1)
+      setCurrentStep(currentStep + 1);
     }
-  }
+  };
 
   const handleBack = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+      setCurrentStep(currentStep - 1);
     }
-  }
+  };
 
-  const handleSubmit = () => {
-    // In real app, submit registration data
-    console.log("Registration submitted:", formData)
-    setCurrentStep(4) // Success step
-  }
+  const handleSubmit = async () => {
+    setSubmitError(null);
+
+    const payload = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      organization: formData.organization,
+      dietaryRestrictions: formData.dietaryRestrictions,
+      subscribeNewsletter: formData.subscribeNewsletter,
+    };
+
+    const submitToServer = async () => {
+      try {
+        const token = localStorage.getItem("auth_token");
+        const res = await fetch(
+          `http://localhost:5000/api/register/${eventId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || "Registration failed");
+        }
+
+        return { success: true };
+      } catch (err) {
+        console.error("registration error", err);
+        return { success: false, error: err.message || String(err) };
+      }
+    };
+
+    // Try submit; if offline or fail, queue locally
+    const result = await submitToServer();
+    if (result.success) {
+      setCurrentStep(4);
+    } else {
+      // fallback: save to local queue for retry when online
+      const queue = JSON.parse(
+        localStorage.getItem("registration_queue") || "[]"
+      );
+      queue.push({ eventId, payload, createdAt: new Date().toISOString() });
+      localStorage.setItem("registration_queue", JSON.stringify(queue));
+      setSubmitError(
+        "You appear to be offline. We've queued your registration and will submit when you're back online."
+      );
+      setCurrentStep(4);
+    }
+  };
 
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return formData.firstName && formData.lastName && formData.email
+        return formData.firstName && formData.lastName && formData.email;
       case 2:
-        return formData.agreeToTerms
+        return formData.agreeToTerms;
       case 3:
-        return true
+        return true;
       default:
-        return false
+        return false;
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -88,12 +166,20 @@ export default function RegisterPage() {
               <div key={step} className="flex items-center">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step <= currentStep ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                    step <= currentStep
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
                   {step < currentStep ? <Check className="w-4 h-4" /> : step}
                 </div>
-                {step < 3 && <div className={`w-12 h-0.5 mx-2 ${step < currentStep ? "bg-primary" : "bg-muted"}`} />}
+                {step < 3 && (
+                  <div
+                    className={`w-12 h-0.5 mx-2 ${
+                      step < currentStep ? "bg-primary" : "bg-muted"
+                    }`}
+                  />
+                )}
               </div>
             ))}
           </div>
@@ -117,7 +203,9 @@ export default function RegisterPage() {
                       <Input
                         id="firstName"
                         value={formData.firstName}
-                        onChange={(e) => handleInputChange("firstName", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("firstName", e.target.value)
+                        }
                         placeholder="Enter your first name"
                       />
                     </div>
@@ -126,7 +214,9 @@ export default function RegisterPage() {
                       <Input
                         id="lastName"
                         value={formData.lastName}
-                        onChange={(e) => handleInputChange("lastName", e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("lastName", e.target.value)
+                        }
                         placeholder="Enter your last name"
                       />
                     </div>
@@ -138,7 +228,9 @@ export default function RegisterPage() {
                       id="email"
                       type="email"
                       value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("email", e.target.value)
+                      }
                       placeholder="Enter your email address"
                     />
                   </div>
@@ -149,7 +241,9 @@ export default function RegisterPage() {
                       id="phone"
                       type="tel"
                       value={formData.phone}
-                      onChange={(e) => handleInputChange("phone", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("phone", e.target.value)
+                      }
                       placeholder="Enter your phone number"
                     />
                   </div>
@@ -159,7 +253,9 @@ export default function RegisterPage() {
                     <Input
                       id="organization"
                       value={formData.organization}
-                      onChange={(e) => handleInputChange("organization", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("organization", e.target.value)
+                      }
                       placeholder="Enter your organization (optional)"
                     />
                   </div>
@@ -169,7 +265,9 @@ export default function RegisterPage() {
                     <Input
                       id="dietary"
                       value={formData.dietaryRestrictions}
-                      onChange={(e) => handleInputChange("dietaryRestrictions", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("dietaryRestrictions", e.target.value)
+                      }
                       placeholder="Any dietary restrictions or allergies"
                     />
                   </div>
@@ -181,19 +279,26 @@ export default function RegisterPage() {
                 <div className="space-y-6">
                   {/* Event Summary */}
                   <div className="p-4 bg-muted rounded-lg">
-                    <h3 className="font-medium text-foreground mb-2">{event.title}</h3>
+                    <h3 className="font-medium text-foreground mb-2">
+                      {event.title}
+                    </h3>
                     <div className="text-small text-muted-foreground space-y-1">
                       <div>
-                        {new Date(event.date).toLocaleDateString()} at {event.time}
+                        {new Date(event.date).toLocaleDateString()} at{" "}
+                        {event.time}
                       </div>
                       <div>{event.location}</div>
-                      <div className="font-medium text-green-600">{event.price === 0 ? "Free" : `$${event.price}`}</div>
+                      <div className="font-medium text-green-600">
+                        {event.price === 0 ? "Free" : `$${event.price}`}
+                      </div>
                     </div>
                   </div>
 
                   {/* Registration Details */}
                   <div className="space-y-3">
-                    <h4 className="font-medium text-foreground">Registration Details</h4>
+                    <h4 className="font-medium text-foreground">
+                      Registration Details
+                    </h4>
                     <div className="grid grid-cols-2 gap-4 text-small">
                       <div>
                         <span className="text-muted-foreground">Name:</span>
@@ -213,7 +318,9 @@ export default function RegisterPage() {
                       )}
                       {formData.organization && (
                         <div>
-                          <span className="text-muted-foreground">Organization:</span>
+                          <span className="text-muted-foreground">
+                            Organization:
+                          </span>
                           <div>{formData.organization}</div>
                         </div>
                       )}
@@ -226,15 +333,26 @@ export default function RegisterPage() {
                       <Checkbox
                         id="terms"
                         checked={formData.agreeToTerms}
-                        onCheckedChange={(checked) => handleInputChange("agreeToTerms", checked)}
+                        onCheckedChange={(checked) =>
+                          handleInputChange("agreeToTerms", checked)
+                        }
                       />
-                      <Label htmlFor="terms" className="text-small leading-relaxed">
+                      <Label
+                        htmlFor="terms"
+                        className="text-small leading-relaxed"
+                      >
                         I agree to the{" "}
-                        <a href="/terms" className="text-primary hover:underline">
+                        <a
+                          href="/terms"
+                          className="text-primary hover:underline"
+                        >
                           Terms of Service
                         </a>{" "}
                         and{" "}
-                        <a href="/privacy" className="text-primary hover:underline">
+                        <a
+                          href="/privacy"
+                          className="text-primary hover:underline"
+                        >
                           Privacy Policy
                         </a>
                       </Label>
@@ -244,10 +362,16 @@ export default function RegisterPage() {
                       <Checkbox
                         id="newsletter"
                         checked={formData.subscribeNewsletter}
-                        onCheckedChange={(checked) => handleInputChange("subscribeNewsletter", checked)}
+                        onCheckedChange={(checked) =>
+                          handleInputChange("subscribeNewsletter", checked)
+                        }
                       />
-                      <Label htmlFor="newsletter" className="text-small leading-relaxed">
-                        Subscribe to our newsletter for event updates and announcements
+                      <Label
+                        htmlFor="newsletter"
+                        className="text-small leading-relaxed"
+                      >
+                        Subscribe to our newsletter for event updates and
+                        announcements
                       </Label>
                     </div>
                   </div>
@@ -262,16 +386,22 @@ export default function RegisterPage() {
                       <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Check className="w-8 h-8 text-green-600" />
                       </div>
-                      <h3 className="text-h3 text-foreground mb-2">Free Event</h3>
+                      <h3 className="text-h3 text-foreground mb-2">
+                        Free Event
+                      </h3>
                       <p className="text-body text-muted-foreground">
-                        No payment required. Click confirm to complete your registration.
+                        No payment required. Click confirm to complete your
+                        registration.
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <h3 className="text-h3 text-foreground">Payment Information</h3>
+                      <h3 className="text-h3 text-foreground">
+                        Payment Information
+                      </h3>
                       <p className="text-body text-muted-foreground">
-                        Payment processing would be integrated here (Stripe, PayPal, etc.)
+                        Payment processing would be integrated here (Stripe,
+                        PayPal, etc.)
                       </p>
                     </div>
                   )}
@@ -284,13 +414,21 @@ export default function RegisterPage() {
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Check className="w-8 h-8 text-green-600" />
                   </div>
-                  <h3 className="text-h3 text-foreground mb-2">Registration Successful!</h3>
+                  <h3 className="text-h3 text-foreground mb-2">
+                    Registration Successful!
+                  </h3>
                   <p className="text-body text-muted-foreground mb-6">
-                    You're all set! A confirmation email has been sent to {formData.email}.
+                    You're all set! A confirmation email has been sent to{" "}
+                    {formData.email}.
                   </p>
                   <div className="space-y-3">
-                    <Button onClick={() => navigate("/account/registrations")}>View My Registrations</Button>
-                    <Button variant="outline" onClick={() => navigate("/events")}>
+                    <Button onClick={() => navigate("/account/registrations")}>
+                      View My Registrations
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate("/events")}
+                    >
                       Browse More Events
                     </Button>
                   </div>
@@ -300,12 +438,19 @@ export default function RegisterPage() {
               {/* Navigation Buttons */}
               {currentStep < 4 && (
                 <div className="flex justify-between pt-6 border-t">
-                  <Button variant="outline" onClick={handleBack} disabled={currentStep === 1}>
+                  <Button
+                    variant="outline"
+                    onClick={handleBack}
+                    disabled={currentStep === 1}
+                  >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back
                   </Button>
 
-                  <Button onClick={currentStep === 3 ? handleSubmit : handleNext} disabled={!isStepValid()}>
+                  <Button
+                    onClick={currentStep === 3 ? handleSubmit : handleNext}
+                    disabled={!isStepValid()}
+                  >
                     {currentStep === 3 ? "Confirm Registration" : "Next"}
                     {currentStep < 3 && <ArrowRight className="w-4 h-4 ml-2" />}
                   </Button>
@@ -318,5 +463,5 @@ export default function RegisterPage() {
 
       <Footer />
     </div>
-  )
+  );
 }

@@ -1,100 +1,114 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useAuth } from "@/lib/auth"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/lib/auth";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export function AuthModal({ isOpen, onClose }) {
-  const { signIn, signUp, resetPassword, isLoading } = useAuth()
-  const [activeTab, setActiveTab] = useState("signin")
-  const [showPassword, setShowPassword] = useState(false)
+  const { signIn, signUp, resetPassword, isLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState("signin");
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     name: "",
     confirmPassword: "",
-  })
-  const [errors, setErrors] = useState({})
-  const [resetEmailSent, setResetEmailSent] = useState(false)
+  });
+  const [errors, setErrors] = useState({});
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }))
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
-  }
+  };
 
   const validateForm = () => {
-    const newErrors = {}
+    const newErrors = {};
 
     if (!formData.email) {
-      newErrors.email = "Email is required"
+      newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid"
+      newErrors.email = "Email is invalid";
     }
 
     if (activeTab !== "reset") {
       if (!formData.password) {
-        newErrors.password = "Password is required"
+        newErrors.password = "Password is required";
       } else if (formData.password.length < 6) {
-        newErrors.password = "Password must be at least 6 characters"
+        newErrors.password = "Password must be at least 6 characters";
       }
     }
 
     if (activeTab === "signup") {
       if (!formData.name) {
-        newErrors.name = "Name is required"
+        newErrors.name = "Name is required";
       }
       if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match"
+        newErrors.confirmPassword = "Passwords do not match";
       }
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!validateForm()) return
+    if (!validateForm()) return;
 
-    let result
+    let result;
     if (activeTab === "signin") {
-      result = await signIn(formData.email, formData.password)
+      result = await signIn(formData.email, formData.password);
     } else if (activeTab === "signup") {
-      result = await signUp(formData.email, formData.password, formData.name)
+      // try to split full name into first/last
+      const names = (formData.name || "").trim().split(" ");
+      const firstName = names.slice(0, -1).join(" ") || names[0] || "";
+      const lastName = names.length > 1 ? names.slice(-1).join(" ") : "";
+      result = await signUp(
+        formData.email,
+        formData.password,
+        firstName,
+        lastName
+      );
     } else if (activeTab === "reset") {
-      result = await resetPassword(formData.email)
+      result = await resetPassword(formData.email);
       if (result.success) {
-        setResetEmailSent(true)
-        return
+        setResetEmailSent(true);
+        return;
       }
     }
 
-    if (result.success) {
-      onClose()
+    if (result && result.success) {
+      onClose();
       // Reset form
-      setFormData({ email: "", password: "", name: "", confirmPassword: "" })
-      setErrors({})
+      setFormData({ email: "", password: "", name: "", confirmPassword: "" });
+      setErrors({});
     } else {
-      setErrors({ submit: result.error || "An error occurred" })
+      setErrors({ submit: (result && result.error) || "An error occurred" });
     }
-  }
+  };
 
   const handleClose = () => {
-    onClose()
-    setFormData({ email: "", password: "", name: "", confirmPassword: "" })
-    setErrors({})
-    setResetEmailSent(false)
-    setActiveTab("signin")
-  }
+    onClose();
+    setFormData({ email: "", password: "", name: "", confirmPassword: "" });
+    setErrors({});
+    setResetEmailSent(false);
+    setActiveTab("signin");
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -110,16 +124,34 @@ export function AuthModal({ isOpen, onClose }) {
         {resetEmailSent ? (
           <div className="text-center py-6">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg
+                className="w-8 h-8 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">Check your email</h3>
-            <p className="text-sm text-muted-foreground mb-4">We've sent a password reset link to {formData.email}</p>
+            <h3 className="text-lg font-medium text-foreground mb-2">
+              Check your email
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              We've sent a password reset link to {formData.email}
+            </p>
             <Button onClick={handleClose}>Close</Button>
           </div>
         ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="w-full"
+          >
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="signin">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -138,7 +170,9 @@ export function AuthModal({ isOpen, onClose }) {
                     placeholder="Enter your email"
                     className={errors.email ? "border-red-500" : ""}
                   />
-                  {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
+                  {errors.email && (
+                    <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                  )}
                 </div>
 
                 <div>
@@ -148,7 +182,9 @@ export function AuthModal({ isOpen, onClose }) {
                       id="signin-password"
                       type={showPassword ? "text" : "password"}
                       value={formData.password}
-                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("password", e.target.value)
+                      }
                       placeholder="Enter your password"
                       className={errors.password ? "border-red-500" : ""}
                     />
@@ -159,10 +195,18 @@ export function AuthModal({ isOpen, onClose }) {
                       className="absolute right-0 top-0 h-full px-3"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
-                  {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password}</p>}
+                  {errors.password && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.password}
+                    </p>
+                  )}
                 </div>
               </TabsContent>
 
@@ -176,7 +220,9 @@ export function AuthModal({ isOpen, onClose }) {
                     placeholder="Enter your full name"
                     className={errors.name ? "border-red-500" : ""}
                   />
-                  {errors.name && <p className="text-sm text-red-500 mt-1">{errors.name}</p>}
+                  {errors.name && (
+                    <p className="text-sm text-red-500 mt-1">{errors.name}</p>
+                  )}
                 </div>
 
                 <div>
@@ -189,7 +235,9 @@ export function AuthModal({ isOpen, onClose }) {
                     placeholder="Enter your email"
                     className={errors.email ? "border-red-500" : ""}
                   />
-                  {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
+                  {errors.email && (
+                    <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                  )}
                 </div>
 
                 <div>
@@ -199,7 +247,9 @@ export function AuthModal({ isOpen, onClose }) {
                       id="signup-password"
                       type={showPassword ? "text" : "password"}
                       value={formData.password}
-                      onChange={(e) => handleInputChange("password", e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("password", e.target.value)
+                      }
                       placeholder="Create a password"
                       className={errors.password ? "border-red-500" : ""}
                     />
@@ -210,10 +260,18 @@ export function AuthModal({ isOpen, onClose }) {
                       className="absolute right-0 top-0 h-full px-3"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
-                  {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password}</p>}
+                  {errors.password && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.password}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -222,11 +280,17 @@ export function AuthModal({ isOpen, onClose }) {
                     id="confirm-password"
                     type="password"
                     value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("confirmPassword", e.target.value)
+                    }
                     placeholder="Confirm your password"
                     className={errors.confirmPassword ? "border-red-500" : ""}
                   />
-                  {errors.confirmPassword && <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>}
+                  {errors.confirmPassword && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.confirmPassword}
+                    </p>
+                  )}
                 </div>
               </TabsContent>
 
@@ -241,12 +305,20 @@ export function AuthModal({ isOpen, onClose }) {
                     placeholder="Enter your email"
                     className={errors.email ? "border-red-500" : ""}
                   />
-                  {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
-                  <p className="text-sm text-muted-foreground mt-2">We'll send you a link to reset your password.</p>
+                  {errors.email && (
+                    <p className="text-sm text-red-500 mt-1">{errors.email}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground mt-2">
+                    We'll send you a link to reset your password.
+                  </p>
                 </div>
               </TabsContent>
 
-              {errors.submit && <p className="text-sm text-red-500 text-center">{errors.submit}</p>}
+              {errors.submit && (
+                <p className="text-sm text-red-500 text-center">
+                  {errors.submit}
+                </p>
+              )}
 
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -259,5 +331,5 @@ export function AuthModal({ isOpen, onClose }) {
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,158 +1,213 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState } from "react";
 
 export interface User {
-  id: string
-  email: string
-  firstName: string
-  lastName: string
-  avatar?: string
-  role: "user" | "admin"
-  createdAt: string
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  avatar?: string;
+  role: "user" | "admin";
+  createdAt: string;
 }
 
 interface AuthContextType {
-  user: User | null
-  loading: boolean
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  user: User | null;
+  loading: boolean;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string }>;
   signUp: (
     email: string,
     password: string,
     firstName: string,
-    lastName: string,
-  ) => Promise<{ success: boolean; error?: string }>
-  signOut: () => Promise<void>
-  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>
+    lastName: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
+  resetPassword: (
+    email: string
+  ) => Promise<{ success: boolean; error?: string }>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  return context
+  return context;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check for existing session on mount
-    checkSession()
-  }, [])
+    checkSession();
+  }, []);
 
   const checkSession = async () => {
     try {
-      const token = localStorage.getItem("auth_token")
+      const token = localStorage.getItem("auth_token");
       if (token) {
-        // In real app, validate token with API
-        const mockUser: User = {
-          id: "1",
-          email: "user@example.com",
-          firstName: "John",
-          lastName: "Doe",
-          role: "user",
-          createdAt: new Date().toISOString(),
+        // Try to restore user from localStorage (backend should return user on signin)
+        const stored = localStorage.getItem("eventhub_user");
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored) as User;
+            setUser(parsed);
+          } catch (e) {
+            console.warn("Failed to parse stored user", e);
+          }
         }
-        setUser(mockUser)
       }
     } catch (error) {
-      console.error("Session check failed:", error)
+      console.error("Session check failed:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
-      setLoading(true)
+      setLoading(true);
+      console.log("pak");
+      const res = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email, password }),
+      });
 
-      // Mock API call - in real app, call your auth API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      if (email === "admin@example.com") {
-        const adminUser: User = {
-          id: "admin",
-          email: "admin@example.com",
-          firstName: "Admin",
-          lastName: "User",
-          role: "admin",
-          createdAt: new Date().toISOString(),
-        }
-        setUser(adminUser)
-        localStorage.setItem("auth_token", "mock_admin_token")
-      } else {
-        const regularUser: User = {
-          id: "1",
-          email,
-          firstName: "John",
-          lastName: "Doe",
-          role: "user",
-          createdAt: new Date().toISOString(),
-        }
-        setUser(regularUser)
-        localStorage.setItem("auth_token", "mock_user_token")
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        return { success: false, error: err.message || "Login failed" };
       }
 
-      return { success: true }
-    } catch (error) {
-      return { success: false, error: "Invalid credentials" }
-    } finally {
-      setLoading(false)
-    }
-  }
+      const data = await res.json();
+      // Expecting { token, user }
+      const token = data.token || data.accessToken || data.authToken;
+      const userData = data.user || data.userData || data;
 
-  const signUp = async (email: string, password: string, firstName: string, lastName: string) => {
+      if (token) localStorage.setItem("auth_token", token);
+      if (userData)
+        localStorage.setItem("eventhub_user", JSON.stringify(userData));
+      setUser(userData);
+
+      return { success: true };
+    } catch (error) {
+      console.error("signin error", error);
+      return {
+        success: false,
+        error: (error && error.message) || "Login failed",
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const signUp = async (
+    email: string,
+    password: string,
+    firstName?: string,
+    lastName?: string
+  ) => {
     try {
-      setLoading(true)
+      setLoading(true);
 
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const payload: Record<string, any> = { username: email, email, password };
+      if (firstName) payload.firstName = firstName;
+      if (lastName) payload.lastName = lastName;
 
-      const newUser: User = {
-        id: Date.now().toString(),
-        email,
-        firstName,
-        lastName,
-        role: "user",
-        createdAt: new Date().toISOString(),
+      const res = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({} as any));
+        return {
+          success: false,
+          error: (err && (err.message || err.error)) || "Registration failed",
+        };
       }
 
-      setUser(newUser)
-      localStorage.setItem("auth_token", "mock_token")
+      const data = await res.json().catch(() => ({} as any));
+      const token = data.token || data.accessToken || data.authToken;
+      const userData = data.user || data.userData || data;
 
-      return { success: true }
-    } catch (error) {
-      return { success: false, error: "Registration failed" }
+      if (token) localStorage.setItem("auth_token", token);
+      if (userData)
+        localStorage.setItem("eventhub_user", JSON.stringify(userData));
+      setUser(userData);
+
+      return { success: true };
+    } catch (err) {
+      console.error("signup error", err);
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? (err as any).message
+          : String(err);
+      return { success: false, error: message || "Registration failed" };
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const signOut = async () => {
-    setUser(null)
-    localStorage.removeItem("auth_token")
-  }
+    setUser(null);
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("eventhub_user");
+  };
 
   const resetPassword = async (email: string) => {
     try {
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      return { success: true }
-    } catch (error) {
-      return { success: false, error: "Reset failed" }
-    }
-  }
+      setLoading(true);
+      const res = await fetch("http://localhost:5000/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
 
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({} as any));
+        return {
+          success: false,
+          error: (err && (err.message || err.error)) || "Reset failed",
+        };
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error("resetPassword error", err);
+      return {
+        success: false,
+        error: (err && (err as any).message) || "Reset failed",
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Expose isLoading and logout aliases for compatibility
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, resetPassword }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signIn,
+        signUp,
+        signOut,
+        resetPassword,
+      }}
+    >
       {children}
     </AuthContext.Provider>
-  )
+  );
 }

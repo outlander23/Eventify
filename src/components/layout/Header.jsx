@@ -287,3 +287,6 @@ export default function Header() {
     </header>
   )
 }
+
+// Also export as a named export for compatibility with named imports
+export { Header }

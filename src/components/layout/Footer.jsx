@@ -212,3 +212,6 @@ export default function Footer() {
     </footer>
   )
 }
+
+// Also export as a named export for compatibility with named imports
+export { Footer }

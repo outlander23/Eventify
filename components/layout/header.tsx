@@ -1,18 +1,25 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Search, User, Menu } from "lucide-react"
-import Link from "next/link"
-import { useState } from "react"
-import { AuthModal } from "@/components/auth/auth-modal"
-import { UserMenu } from "@/components/auth/user-menu"
-import { useAuth } from "@/lib/auth"
-import { OfflineStatus } from "@/components/pwa/offline-status"
+import { Button } from "@/components/ui/button";
+// Input removed to keep header minimal
+import { Search, User, Menu } from "lucide-react";
+import Link from "next/link";
+import { useState, useEffect } from "react";
+import { AuthModal } from "@/components/auth/auth-modal";
+import { UserMenu } from "@/components/auth/user-menu";
+import { useAuth } from "@/lib/auth";
+import { OfflineStatus } from "@/components/pwa/offline-status";
 
 export function Header() {
-  const [authModalOpen, setAuthModalOpen] = useState(false)
-  const { user, loading } = useAuth()
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { user, loading } = useAuth();
+
+  // Open auth modal when other components dispatch a global event
+  useEffect(() => {
+    const handler = () => setAuthModalOpen(true);
+    window.addEventListener("open-auth", handler);
+    return () => window.removeEventListener("open-auth", handler);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-surface border-b border-border">
@@ -24,18 +31,15 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">E</span>
+              <span className="text-primary-foreground font-bold text-lg">
+                E
+              </span>
             </div>
             <span className="font-bold text-xl text-foreground">EventHub</span>
           </Link>
 
-          {/* Desktop Search */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input placeholder="Search events..." className="pl-10 bg-background border-border" />
-            </div>
-          </div>
+          {/* Simplified header: keep brand centered and minimal actions */}
+          <div className="flex-1" />
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
@@ -50,7 +54,11 @@ export function Header() {
             ) : user ? (
               <UserMenu />
             ) : (
-              <Button variant="outline" size="sm" onClick={() => setAuthModalOpen(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAuthModalOpen(true)}
+              >
                 <User className="w-4 h-4 mr-2" />
                 Sign In
               </Button>
@@ -67,7 +75,11 @@ export function Header() {
             {user ? (
               <UserMenu />
             ) : (
-              <Button variant="ghost" size="sm" onClick={() => setAuthModalOpen(true)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAuthModalOpen(true)}
+              >
                 <User className="w-5 h-5" />
               </Button>
             )}
@@ -80,5 +92,5 @@ export function Header() {
 
       <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </header>
-  )
+  );
 }

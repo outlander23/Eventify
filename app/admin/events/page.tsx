@@ -1,70 +1,75 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Search, Plus, MoreHorizontal, Edit, Trash2, Eye, Users } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import Link from "next/link"
-
-// Mock events data
-const events = [
-  {
-    id: 1,
-    title: "Tech Conference 2024",
-    date: "2024-03-15",
-    status: "active",
-    attendees: 156,
-    capacity: 200,
-    revenue: "$4,680",
-    category: "Technology",
-  },
-  {
-    id: 2,
-    title: "Business Networking Mixer",
-    date: "2024-03-20",
-    status: "draft",
-    attendees: 0,
-    capacity: 100,
-    revenue: "$0",
-    category: "Business",
-  },
-  {
-    id: 3,
-    title: "Digital Art Workshop",
-    date: "2024-03-25",
-    status: "active",
-    attendees: 89,
-    capacity: 120,
-    revenue: "$2,670",
-    category: "Arts",
-  },
-  {
-    id: 4,
-    title: "React Meetup",
-    date: "2024-04-01",
-    status: "published",
-    attendees: 45,
-    capacity: 80,
-    revenue: "$0",
-    category: "Technology",
-  },
-]
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Search,
+  Plus,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
+  Users,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import Link from "next/link";
 
 export default function AdminEvents() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchEvents = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("http://localhost:5000/api/events");
+        if (!res.ok) throw new Error("Failed to load events");
+        const data = await res.json();
+        if (mounted) setEvents(Array.isArray(data) ? data : data.events || []);
+      } catch (err: any) {
+        console.error(err);
+        if (mounted) setError(err.message || String(err));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchEvents();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filteredEvents = events.filter((event) => {
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === "all" || event.status === statusFilter
-    const matchesCategory = categoryFilter === "all" || event.category === categoryFilter
-    return matchesSearch && matchesStatus && matchesCategory
-  })
+    const matchesSearch = event.title
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || event.status === statusFilter;
+    const matchesCategory =
+      categoryFilter === "all" || event.category === categoryFilter;
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
 
   return (
     <div className="space-y-6">
@@ -72,7 +77,9 @@ export default function AdminEvents() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Events</h1>
-          <p className="text-muted-foreground mt-1">Manage and organize your events</p>
+          <p className="text-muted-foreground mt-1">
+            Manage and organize your events
+          </p>
         </div>
         <Button asChild>
           <Link href="/admin/events/create">
@@ -137,16 +144,18 @@ export default function AdminEvents() {
               >
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="font-medium text-foreground">{event.title}</h3>
+                    <h3 className="font-medium text-foreground">
+                      {event.title}
+                    </h3>
                     <Badge
                       variant={
                         event.status === "active"
                           ? "default"
                           : event.status === "published"
-                            ? "secondary"
-                            : event.status === "draft"
-                              ? "outline"
-                              : "destructive"
+                          ? "secondary"
+                          : event.status === "draft"
+                          ? "outline"
+                          : "destructive"
                       }
                     >
                       {event.status}
@@ -159,7 +168,9 @@ export default function AdminEvents() {
                       <Users className="w-3 h-3" />
                       {event.attendees}/{event.capacity}
                     </div>
-                    <span className="font-medium text-foreground">{event.revenue}</span>
+                    <span className="font-medium text-foreground">
+                      {event.revenue}
+                    </span>
                   </div>
                 </div>
 
@@ -171,7 +182,11 @@ export default function AdminEvents() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>
-                      <Link href={`/events/${event.title.toLowerCase().replace(/\s+/g, "-")}`}>
+                      <Link
+                        href={`/events/${event.title
+                          .toLowerCase()
+                          .replace(/\s+/g, "-")}`}
+                      >
                         <Eye className="w-4 h-4 mr-2" />
                         View Event
                       </Link>
@@ -200,5 +215,5 @@ export default function AdminEvents() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
