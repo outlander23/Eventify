@@ -14,93 +14,52 @@ const AdminDashboard = () => {
   });
   const [recentEvents, setRecentEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Fetch admin statistics
-    fetchAdminStats();
-    fetchRecentEvents();
-  }, []);
-
-  const fetchAdminStats = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/stats", {
-        headers: getAuthHeaders(),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      } else {
-        console.error("Failed to fetch admin stats");
-        // Fallback to mock data
-        setStats({
-          totalEvents: 25,
-          totalRegistrations: 150,
-          totalUsers: 89,
-          upcomingEvents: 8,
+    const fetchStats = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("http://localhost:5000/api/stats", {
+          headers: getAuthHeaders(),
         });
-      }
-    } catch (error) {
-      console.error("Error fetching admin stats:", error);
-      // Fallback to mock data
-      setStats({
-        totalEvents: 25,
-        totalRegistrations: 150,
-        totalUsers: 89,
-        upcomingEvents: 8,
-      });
-    }
-  };
+        if (!res.ok) throw new Error(`Failed to fetch stats: ${res.status}`);
+        const data = await res.json();
+        // data shape provided:
+        // { total_events, total_registrations, total_users, upcoming_events: [ ... ] }
+        const upcomingList = Array.isArray(data.upcoming_events)
+          ? data.upcoming_events
+          : [];
 
-  const fetchRecentEvents = async () => {
-    try {
-      const response = await fetch("http://localhost:5000/api/events", {
-        headers: getAuthHeaders(),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Take only the first 5 events for the dashboard
-        setRecentEvents(data.slice(0, 5));
-      } else {
-        console.error("Failed to fetch recent events");
-        // Fallback to mock data
-        setRecentEvents([
-          {
-            id: 1,
-            title: "Tech Conference 2025",
-            date: "2025-10-15",
-            registrations: 45,
-          },
-          {
-            id: 2,
-            title: "Music Festival",
-            date: "2025-11-20",
-            registrations: 32,
-          },
-        ]);
+        setStats({
+          totalEvents: Number(data.total_events) || 0,
+          totalRegistrations: Number(data.total_registrations) || 0,
+          totalUsers: Number(data.total_users) || 0,
+          upcomingEvents: upcomingList.length,
+        });
+        // Use upcoming_events as recent list (limit 5)
+        setRecentEvents(
+          upcomingList.slice(0, 5).map((e) => ({
+            id: e.id,
+            title: e.title,
+            date: e.date,
+            registrations: e.registrations ?? 0,
+          }))
+        );
+      } catch (err) {
+        console.error("Error fetching admin stats:", err);
+        setError("Could not load dashboard stats.");
+        // Minimal fallback
+        setStats((prev) => ({ ...prev }));
+        setRecentEvents([]);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching recent events:", error);
-      // Fallback to mock data
-      setRecentEvents([
-        {
-          id: 1,
-          title: "Tech Conference 2025",
-          date: "2025-10-15",
-          registrations: 45,
-        },
-        {
-          id: 2,
-          title: "Music Festival",
-          date: "2025-11-20",
-          registrations: 32,
-        },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchStats();
+  }, [getAuthHeaders]);
 
   if (!user || !user.is_admin) {
     return (
@@ -113,6 +72,18 @@ const AdminDashboard = () => {
             <p className="text-gray-600">
               You don't have permission to access this page.
             </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-16">
+        <Card>
+          <div className="p-8 text-center">
+            <p className="text-gray-600">Loading dashboard…</p>
           </div>
         </Card>
       </div>
@@ -139,8 +110,15 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {error && (
+        <div className="mb-6 p-4 rounded-md bg-red-50 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Total Events */}
         <Card>
           <div className="p-6">
             <div className="flex items-center">
@@ -171,6 +149,7 @@ const AdminDashboard = () => {
           </div>
         </Card>
 
+        {/* Total Registrations */}
         <Card>
           <div className="p-6">
             <div className="flex items-center">
@@ -201,6 +180,7 @@ const AdminDashboard = () => {
           </div>
         </Card>
 
+        {/* Total Users */}
         <Card>
           <div className="p-6">
             <div className="flex items-center">
@@ -229,6 +209,7 @@ const AdminDashboard = () => {
           </div>
         </Card>
 
+        {/* Upcoming Events Count */}
         <Card>
           <div className="p-6">
             <div className="flex items-center">
@@ -274,13 +255,7 @@ const AdminDashboard = () => {
               >
                 Create New Event
               </Button>
-              {/* <Button
-                href="/admin/analytics"
-                variant="outline"
-                className="w-full justify-center"
-              >
-                View Analytics
-              </Button> */}
+              {/* <Button href="/admin/analytics" variant="outline" className="w-full justify-center">View Analytics</Button> */}
               <Button
                 href="/events"
                 variant="outline"
@@ -295,9 +270,12 @@ const AdminDashboard = () => {
         <Card>
           <div className="p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Recent Events
+              Upcoming Events
             </h3>
             <div className="space-y-3">
+              {recentEvents.length === 0 && (
+                <p className="text-sm text-gray-500">No upcoming events.</p>
+              )}
               {recentEvents.map((event) => (
                 <div
                   key={event.id}
@@ -305,7 +283,9 @@ const AdminDashboard = () => {
                 >
                   <div>
                     <p className="font-medium text-gray-900">{event.title}</p>
-                    <p className="text-sm text-gray-600">{event.date}</p>
+                    <p className="text-sm text-gray-600">
+                      {new Date(event.date).toLocaleString()}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-gray-900">
