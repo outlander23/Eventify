@@ -47,12 +47,9 @@ const EditEvent = () => {
     try {
       setFetchingEvent(true);
 
-      const response = await fetch(
-        `http://localhost:5000/api/admin/events/${id}`,
-        {
-          headers: getAuthHeaders(),
-        }
-      );
+      const response = await fetch(`http://localhost:5000/api/events/${id}`, {
+        headers: getAuthHeaders(),
+      });
 
       if (response.ok) {
         const event = await response.json();
@@ -150,16 +147,47 @@ const EditEvent = () => {
     setLoading(true);
 
     try {
-      // Mock API call - replace with actual API endpoint
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Combine date and time into a single datetime string
+      const eventDateTime = `${formData.date}T${formData.time}:00`;
 
-      console.log("Updating event:", formData);
+      const eventData = {
+        title: formData.title,
+        description: formData.description,
+        date: eventDateTime,
+        location: formData.location,
+        capacity: parseInt(formData.maxAttendees),
+        category: formData.category,
+        // Add other fields as needed by your backend
+      };
 
-      // Navigate back to admin dashboard on success
-      navigate("/admin");
+      console.log("Updating event with data:", eventData);
+
+      const response = await fetch(`http://localhost:5000/api/events/${id}`, {
+        method: "PUT",
+        headers: {
+          ...getAuthHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(eventData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Event updated successfully:", result);
+        // Navigate back to admin dashboard on success
+        navigate("/admin");
+      } else {
+        const error = await response.json();
+        console.error("Failed to update event:", error);
+        setErrors({
+          submit: error.message || "Failed to update event. Please try again.",
+        });
+      }
     } catch (error) {
       console.error("Error updating event:", error);
-      setErrors({ submit: "Failed to update event. Please try again." });
+      setErrors({
+        submit: "Network error. Please check if backend is running.",
+      });
     } finally {
       setLoading(false);
     }
@@ -177,16 +205,29 @@ const EditEvent = () => {
     setLoading(true);
 
     try {
-      // Mock API call - replace with actual API endpoint
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       console.log("Deleting event:", id);
 
-      // Navigate back to admin dashboard on success
-      navigate("/admin");
+      const response = await fetch(`http://localhost:5000/api/events/${id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+
+      if (response.ok) {
+        console.log("Event deleted successfully");
+        // Navigate back to admin dashboard on success
+        navigate("/admin");
+      } else {
+        const error = await response.json();
+        console.error("Failed to delete event:", error);
+        setErrors({
+          submit: error.message || "Failed to delete event. Please try again.",
+        });
+      }
     } catch (error) {
       console.error("Error deleting event:", error);
-      setErrors({ submit: "Failed to delete event. Please try again." });
+      setErrors({
+        submit: "Network error. Please check if backend is running.",
+      });
     } finally {
       setLoading(false);
     }

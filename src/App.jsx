@@ -32,7 +32,7 @@ function App() {
           <Route path="/admin/events/create" element={<CreateEvent />} />
           <Route path="/admin/events/:id/edit" element={<EditEvent />} />
           <Route path="/my-registrations" element={<MyRegistrations />} />
-          <Route path="/admin/analytics" element={<Analytics />} />
+          {/* <Route path="/admin/analytics" element={<Analytics />} /> */}
         </Routes>
       </Layout>
     </AuthProvider>

@@ -23,7 +23,7 @@ const AdminDashboard = () => {
 
   const fetchAdminStats = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/admin/stats", {
+      const response = await fetch("http://localhost:5000/api/stats", {
         headers: getAuthHeaders(),
       });
 
@@ -54,16 +54,14 @@ const AdminDashboard = () => {
 
   const fetchRecentEvents = async () => {
     try {
-      const response = await fetch(
-        "http://localhost:5000/api/admin/events?limit=5",
-        {
-          headers: getAuthHeaders(),
-        }
-      );
+      const response = await fetch("http://localhost:5000/api/events", {
+        headers: getAuthHeaders(),
+      });
 
       if (response.ok) {
         const data = await response.json();
-        setRecentEvents(data);
+        // Take only the first 5 events for the dashboard
+        setRecentEvents(data.slice(0, 5));
       } else {
         console.error("Failed to fetch recent events");
         // Fallback to mock data
@@ -137,9 +135,6 @@ const AdminDashboard = () => {
             <Button className="bg-blue-600 hover:bg-blue-700 text-white">
               Create Event
             </Button>
-          </Link>
-          <Link to="/admin/analytics">
-            <Button variant="outline">View Analytics</Button>
           </Link>
         </div>
       </div>
@@ -279,13 +274,13 @@ const AdminDashboard = () => {
               >
                 Create New Event
               </Button>
-              <Button
+              {/* <Button
                 href="/admin/analytics"
                 variant="outline"
                 className="w-full justify-center"
               >
                 View Analytics
-              </Button>
+              </Button> */}
               <Button
                 href="/events"
                 variant="outline"

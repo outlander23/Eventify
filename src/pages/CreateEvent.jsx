@@ -122,7 +122,7 @@ const CreateEvent = () => {
 
       console.log("Creating event with data:", eventData);
 
-      const response = await fetch("http://localhost:5000/api/admin/events", {
+      const response = await fetch("http://localhost:5000/api/events", {
         method: "POST",
         headers: {
           ...getAuthHeaders(),

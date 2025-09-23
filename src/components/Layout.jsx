@@ -8,6 +8,7 @@ const Layout = ({ children }) => {
   const { user, logout, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  console.log(user?.username);
 
   const handleLogout = () => {
     logout();
@@ -41,7 +42,7 @@ const Layout = ({ children }) => {
                   Events
                 </Link>
 
-                {user && (
+                {user?.username && (
                   <Link
                     to="/my-registrations"
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -50,7 +51,7 @@ const Layout = ({ children }) => {
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                   >
-                    My Events
+                    My Registrations
                   </Link>
                 )}
 
@@ -66,7 +67,7 @@ const Layout = ({ children }) => {
                     >
                       Admin
                     </Link>
-                    <Link
+                    {/* <Link
                       to="/admin/analytics"
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         isActive("/admin/analytics")
@@ -75,7 +76,7 @@ const Layout = ({ children }) => {
                       }`}
                     >
                       Analytics
-                    </Link>
+                    </Link> */}
                   </>
                 )}
               </div>

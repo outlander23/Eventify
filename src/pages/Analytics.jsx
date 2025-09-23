@@ -29,7 +29,7 @@ const Analytics = () => {
       setLoading(true);
 
       const response = await fetch(
-        `http://localhost:5000/api/admin/analytics?timeframe=${timeframe}`,
+        `http://localhost:5000/api/stats?timeframe=${timeframe}`,
         {
           headers: getAuthHeaders(),
         }
