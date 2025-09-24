@@ -20,6 +20,7 @@ import {
   CheckCircle,
   AlertCircle,
 } from "lucide-react";
+import notificationService from "../services/notificationService";
 
 const EventDetails = () => {
   const { id } = useParams();
@@ -48,13 +49,11 @@ const EventDetails = () => {
         setEvent(data);
       } else {
         console.error("Failed to fetch event details");
-        // Mock data for development
         const mockEvent = mockEvents.find((e) => e.id === Number.parseInt(id));
         setEvent(mockEvent);
       }
     } catch (error) {
       console.error("Error fetching event details:", error);
-      // Mock data for development
       const mockEvent = mockEvents.find((e) => e.id === Number.parseInt(id));
       setEvent(mockEvent);
     } finally {
@@ -74,7 +73,6 @@ const EventDetails = () => {
         const registrations = await response.json();
         console.log("My registrations:", registrations);
         const isUserRegistered = registrations.some((reg) => {
-          // Handle different possible field names
           const eventId = reg.event_id || reg.eventId || reg.id;
           return eventId === Number.parseInt(id);
         });
@@ -116,6 +114,21 @@ const EventDetails = () => {
         console.log("Registration success:", data);
         setIsRegistered(true);
         setMessage(data.message || "Successfully registered for the event!");
+
+        // Schedule notification reminder for this event
+        try {
+          await notificationService.scheduleEventReminder(
+            event,
+            getAuthHeaders
+          );
+        } catch (notificationError) {
+          console.error(
+            "Failed to schedule notification reminder:",
+            notificationError
+          );
+          // Don't fail registration if notification scheduling fails
+        }
+
         // Refresh event details to get updated registration count
         await fetchEventDetails();
       } else {
@@ -195,7 +208,6 @@ const EventDetails = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Back Button */}
       <Button
         variant="ghost"
         onClick={() => navigate("/events")}
@@ -206,7 +218,6 @@ const EventDetails = () => {
       </Button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
@@ -255,7 +266,6 @@ const EventDetails = () => {
                 </div>
               </div>
 
-              {/* Additional Event Details */}
               <div className="border-t border-border pt-6">
                 <h3 className="text-lg font-medium text-foreground mb-3">
                   About This Event
@@ -268,7 +278,6 @@ const EventDetails = () => {
           </Card>
         </div>
 
-        {/* Registration Sidebar */}
         <div className="lg:col-span-1">
           <Card className="sticky top-8">
             <CardHeader>
@@ -276,7 +285,6 @@ const EventDetails = () => {
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {/* Debug info for development */}
               {process.env.NODE_ENV === "development" && (
                 <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
                   <div>Event ID: {id}</div>
@@ -380,69 +388,5 @@ const EventDetails = () => {
     </div>
   );
 };
-
-// Mock data for development (same as Events.jsx)
-const mockEvents = [
-  {
-    id: 1,
-    title: "Tech Conference 2025",
-    description:
-      "Join us for the biggest tech conference of the year featuring industry leaders and cutting-edge innovations. This comprehensive event will cover the latest trends in technology, including artificial intelligence, blockchain, cloud computing, and cybersecurity. Network with professionals from around the world and gain insights that will shape the future of technology.",
-    date: "2025-03-15T09:00:00",
-    location: "San Francisco Convention Center",
-    capacity: 500,
-    registrations: 342,
-  },
-  {
-    id: 2,
-    title: "Web Development Workshop",
-    description:
-      "Learn modern web development techniques with React, Node.js, and cloud deployment strategies. This hands-on workshop is perfect for developers looking to enhance their skills and stay current with the latest web technologies.",
-    date: "2025-02-20T14:00:00",
-    location: "Tech Hub Downtown",
-    capacity: 50,
-    registrations: 35,
-  },
-  {
-    id: 3,
-    title: "Startup Networking Event",
-    description:
-      "Connect with fellow entrepreneurs, investors, and startup enthusiasts in a casual networking environment. Share ideas, find potential collaborators, and learn from successful startup founders.",
-    date: "2025-02-28T18:00:00",
-    location: "Innovation Center",
-    capacity: 100,
-    registrations: 67,
-  },
-  {
-    id: 4,
-    title: "AI & Machine Learning Summit",
-    description:
-      "Explore the latest developments in artificial intelligence and machine learning with expert speakers from leading tech companies and research institutions.",
-    date: "2025-04-10T10:00:00",
-    location: "University Auditorium",
-    capacity: 200,
-    registrations: 200,
-  },
-  {
-    id: 5,
-    title: "Design Thinking Workshop",
-    description:
-      "Master the principles of design thinking and user experience design in this hands-on workshop. Learn how to create user-centered solutions and improve your design process.",
-    date: "2025-03-05T13:00:00",
-    location: "Creative Studio",
-    capacity: 30,
-    registrations: 18,
-  },
-  {
-    id: 6,
-    title: "Digital Marketing Masterclass",
-    description:
-      "Learn advanced digital marketing strategies including SEO, social media, and content marketing. Perfect for marketers looking to improve their digital presence and drive better results.",
-    date: "2025-03-22T11:00:00",
-    location: "Business Center",
-    capacity: 75,
-    registrations: 42,
-  },
-];
 
 export default EventDetails;

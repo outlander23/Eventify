@@ -37,7 +37,6 @@ const Login = () => {
     const result = await login(formData.username, formData.password);
 
     if (result.success) {
-      // Small delay to ensure state updates
       setTimeout(() => {
         navigate(from, { replace: true });
       }, 100);
